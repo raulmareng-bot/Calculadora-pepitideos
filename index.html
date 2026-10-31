@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calculadora de peptídeos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #EDF2F4;
+    --panel: #FFFFFF;
+    --ink: #13233A;
+    --muted: #5B6B7E;
+    --line: #C9D4DC;
+    --accent: #1D6E86;
+    --liquid: #3FB5C9;
+    --liquid-edge: #1D8BA0;
+    --warn-bg: #FFF1E6;
+    --warn: #A6400C;
+    --barrel: #F8FBFC;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1722; --panel: #16222F; --ink: #E6EEF4; --muted: #93A4B5;
+      --line: #2C3D4E; --accent: #6CC3D8; --liquid: #2F9DB3; --liquid-edge: #7FD6E8;
+      --warn-bg: #3A2215; --warn: #FFB27A; --barrel: #1C2B3A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1722; --panel: #16222F; --ink: #E6EEF4; --muted: #93A4B5;
+    --line: #2C3D4E; --accent: #6CC3D8; --liquid: #2F9DB3; --liquid-edge: #7FD6E8;
+    --warn-bg: #3A2215; --warn: #FFB27A; --barrel: #1C2B3A;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 17px; line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 28px 18px 48px; }
+  h1 { font-size: 1.9rem; line-height: 1.15; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted); margin: 0 0 24px; max-width: 52ch; }
+
+  .result {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+    padding: 20px 18px 16px; margin-bottom: 22px;
+  }
+  .draw { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .draw-num { font-size: 3.6rem; font-weight: 700; line-height: 1; color: var(--accent); }
+  .draw-unit { font-size: 1.3rem; font-weight: 700; }
+  .draw-sub { color: var(--muted); margin: 6px 0 14px; }
+  svg#syringe { width: 100%; height: auto; display: block; }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .fact { border-top: 2px solid var(--line); padding-top: 8px; }
+  .fact b { display: block; font-size: 1.15rem; }
+  .fact span { color: var(--muted); font-size: 0.85rem; }
+  .warn {
+    background: var(--warn-bg); color: var(--warn); border-radius: 10px;
+    padding: 10px 12px; margin-top: 14px; font-size: 0.95rem; display: none;
+  }
+  .warn.show { display: block; }
+
+  form { display: grid; gap: 18px; }
+  .field label { display: block; font-weight: 700; margin-bottom: 6px; }
+  .field .hint { color: var(--muted); font-size: 0.88rem; margin-top: 4px; }
+  .input-wrap { display: flex; align-items: stretch; border: 1.5px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; }
+  .input-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .input-wrap input {
+    flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink);
+    font: inherit; font-size: 1.25rem; padding: 12px 14px; outline: none;
+  }
+  .input-wrap .suffix { display: flex; align-items: center; padding: 0 14px; color: var(--muted); border-left: 1px solid var(--line); }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label {
+    margin: 0; text-align: center; padding: 12px 6px; border-radius: 12px; cursor: pointer;
+    border: 1.5px solid var(--line); background: var(--panel); font-weight: 700;
+  }
+  .seg label small { display: block; font-weight: 400; color: var(--muted); font-size: 0.8rem; }
+  .seg input:checked + label { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); }
+  .seg input:focus-visible + label { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  details { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 14px; }
+  summary { cursor: pointer; font-weight: 700; }
+  details p { color: var(--muted); max-width: 60ch; }
+  .note { color: var(--muted); font-size: 0.85rem; margin-top: 22px; }
+  @media (max-width: 420px) { .draw-num { font-size: 3rem; } .facts { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Quanto puxar na seringa</h1>
+  <p class="lede">Informe o frasco, a água usada na reconstituição e a dose. O resultado sai em unidades (UI) da seringa de insulina U-100.</p>
+
+  <section class="result" aria-live="polite">
+    <div class="draw">
+      <span class="draw-num" id="units">–</span>
+      <span class="draw-unit">UI</span>
+    </div>
+    <p class="draw-sub" id="drawSub">Preencha os campos abaixo.</p>
+    <svg id="syringe" viewBox="0 0 360 96" role="img" aria-label="Seringa mostrando o volume a puxar"></svg>
+    <div class="facts">
+      <div class="fact"><b id="conc">–</b><span>mg por mL</span></div>
+      <div class="fact"><b id="ml">–</b><span>mL por dose</span></div>
+      <div class="fact"><b id="doses">–</b><span>doses no frasco</span></div>
+    </div>
+    <div class="warn" id="warn"></div>
+  </section>
+
+  <form onsubmit="return false">
+    <div class="field">
+      <label for="vial">Peptídeo no frasco</label>
+      <div class="input-wrap"><input id="vial" type="number" inputmode="decimal" min="0" step="any" value="5"><span class="suffix">mg</span></div>
+    </div>
+    <div class="field">
+      <label for="water">Água bacteriostática adicionada</label>
+      <div class="input-wrap"><input id="water" type="number" inputmode="decimal" min="0" step="any" value="2"><span class="suffix">mL</span></div>
+    </div>
+    <div class="field">
+      <label for="dose">Dose desejada</label>
+      <div class="input-wrap"><input id="dose" type="number" inputmode="decimal" min="0" step="any" value="0.25"><span class="suffix">mg</span></div>
+      <div class="hint" id="mcg">= 250 mcg</div>
+    </div>
+    <div class="field">
+      <label>Seringa</label>
+      <div class="seg" role="radiogroup">
+        <input type="radio" name="syr" id="s30" value="0.3"><label for="s30">0,3 mL<small>30 UI</small></label>
+        <input type="radio" name="syr" id="s50" value="0.5"><label for="s50">0,5 mL<small>50 UI</small></label>
+        <input type="radio" name="syr" id="s100" value="1" checked><label for="s100">1 mL<small>100 UI</small></label>
+      </div>
+    </div>
+  </form>
+
+  <details>
+    <summary>Como o cálculo é feito</summary>
+    <p>Concentração = mg do frasco ÷ mL de água. Volume da dose = dose ÷ concentração. Numa seringa U-100, 1 mL equivale a 100 UI, então UI = volume em mL × 100. O tamanho da seringa não muda a conta, só a capacidade e o espaçamento das marcas.</p>
+  </details>
+  <p class="note">Ferramenta de conversão matemática. A dose em si deve vir de um profissional de saúde. Confira sempre os valores do rótulo do frasco.</p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = (n, d = 2) => n.toLocaleString('pt-BR', { maximumFractionDigits: d });
+const num = el => { const v = parseFloat(String(el.value).replace(',', '.')); return isFinite(v) ? v : NaN; };
+
+function drawSyringe(capU, fillU) {
+  const x0 = 46, x1 = 300, y0 = 26, h = 34, w = x1 - x0;
+  const minor = capU <= 50 ? 1 : 2;
+  const major = capU <= 30 ? 5 : 10;
+  const frac = Math.max(0, Math.min(fillU / capU, 1));
+  const fx = x0 + frac * w;
+  let s = '';
+  // needle
+  s += `<line x1="4" y1="${y0 + h/2}" x2="${x0 - 12}" y2="${y0 + h/2}" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"/>`;
+  s += `<rect x="${x0 - 12}" y="${y0 + 9}" width="12" height="${h - 18}" rx="2" fill="var(--line)"/>`;
+  // barrel
+  s += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" rx="5" fill="var(--barrel)" stroke="var(--muted)" stroke-width="1.5"/>`;
+  // liquid
+  if (frac > 0) s += `<rect x="${x0 + 1}" y="${y0 + 1}" width="${Math.max(fx - x0 - 1, 0)}" height="${h - 2}" rx="4" fill="var(--liquid)" opacity=".75"/>`;
+  // ticks
+  for (let u = 0; u <= capU; u += minor) {
+    const x = x0 + (u / capU) * w;
+    const isMajor = u % major === 0;
+    s += `<line x1="${x}" y1="${y0}" x2="${x}" y2="${y0 + (isMajor ? 14 : 7)}" stroke="var(--ink)" stroke-width="${isMajor ? 1.3 : 0.7}"/>`;
+    if (isMajor) s += `<text x="${x}" y="${y0 - 6}" font-size="10" text-anchor="middle" fill="var(--muted)" font-family="inherit">${u}</text>`;
+  }
+  // plunger at fill level
+  s += `<rect x="${fx - 3}" y="${y0 + 2}" width="6" height="${h - 4}" rx="1.5" fill="var(--ink)"/>`;
+  s += `<rect x="${fx + 3}" y="${y0 + h/2 - 3}" width="${x1 + 30 - fx}" height="6" fill="var(--muted)" opacity=".7"/>`;
+  s += `<rect x="${x1 + 30}" y="${y0 - 4}" width="6" height="${h + 8}" rx="2" fill="var(--muted)"/>`;
+  s += `<rect x="${x1}" y="${y0 - 2}" width="4" height="${h + 4}" rx="1" fill="var(--muted)"/>`;
+  // marker
+  if (frac > 0) s += `<text x="${fx}" y="${y0 + h + 22}" font-size="12" font-weight="700" text-anchor="middle" fill="var(--accent)" font-family="inherit">▲ ${fmt(fillU, 1)}</text>`;
+  $('syringe').innerHTML = s;
+}
+
+function calc() {
+  const vial = num($('vial')), water = num($('water')), dose = num($('dose'));
+  const capML = parseFloat(document.querySelector('input[name=syr]:checked').value);
+  const capU = Math.round(capML * 100);
+  const warn = $('warn'); const msgs = [];
+
+  $('mcg').textContent = isFinite(dose) ? `= ${fmt(dose * 1000, 1)} mcg` : '';
+
+  if (!(vial > 0) || !(water > 0) || !(dose > 0)) {
+    $('units').textContent = '–'; $('conc').textContent = '–'; $('ml').textContent = '–'; $('doses').textContent = '–';
+    $('drawSub').textContent = 'Preencha os três valores com números maiores que zero.';
+    drawSyringe(capU, 0); warn.classList.remove('show'); return;
+  }
+
+  const conc = vial / water;           // mg/mL
+  const vol = dose / conc;             // mL
+  const units = vol * 100;             // UI (U-100)
+  const doses = vial / dose;
+
+  $('units').textContent = fmt(units, 1);
+  $('conc').textContent = fmt(conc, 3);
+  $('ml').textContent = fmt(vol, 3);
+  $('doses').textContent = fmt(Math.floor(doses + 1e-9), 0);
+
+  const minor = capU <= 50 ? 1 : 2;
+  const nearest = Math.round(units / minor) * minor;
+  $('drawSub').textContent = Math.abs(nearest - units) > 0.05
+    ? `Puxe até a marca de ${fmt(units, 1)} UI (a marca mais próxima nessa seringa é ${fmt(nearest, 0)}).`
+    : `Puxe até a marca de ${fmt(units, 1)} UI.`;
+
+  if (units > capU) msgs.push(`A dose pede ${fmt(units, 1)} UI e a seringa só comporta ${capU}. Use uma seringa maior ou divida em duas aplicações.`);
+  if (units < minor) msgs.push(`Volume menor que a menor marca da seringa (${minor} UI). Adicione mais água no frasco ou use uma seringa menor.`);
+  if (dose > vial) msgs.push('A dose é maior que o total de peptídeo no frasco.');
+  warn.innerHTML = msgs.join('<br><br>');
+  warn.classList.toggle('show', msgs.length > 0);
+
+  drawSyringe(capU, Math.min(units, capU));
+}
+
+document.querySelectorAll('input').forEach(el => el.addEventListener('input', calc));
+calc();
+</script>
+</body>
+</html>
